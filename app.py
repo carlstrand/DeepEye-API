@@ -2,6 +2,10 @@ from flask import Flask, request, jsonify
 from tinydb import TinyDB, Query
 import face_recognition
 from config import *
+import io, base64
+import itertools
+import json
+from PIL import Image
 
 app = Flask(__name__)
 
@@ -31,7 +35,25 @@ print('Done.')
 
 @app.route('/recognize', methods=['GET', 'POST'])
 def recognize():
-	return 'sample'
+	img_b64 = json.loads(request.data)['image']
+	img_data = base64.b64decode(img_b64)
+	im = Image.open(io.BytesIO(img_data))
+	im.thumbnail((1024, 1024))
+	im = im.rotate(-90)
+
+	stdout = io.BytesIO()
+	im.save(stdout, format='JPEG')
+	hex_data = stdout.getvalue()
+	#with open('current_face.jpg', 'wb') as f:
+		#f.write(img_data)
+	unknown_face = face_recognition.load_image_file(io.BytesIO(hex_data))
+	unknown_face_encoding = face_recognition.face_encodings(unknown_face)[0]
+	for known_face_encoding, face_data in zip(known_face_encodings, db_data):
+		results = face_recognition.compare_faces([known_face_encoding], unknown_face_encoding)
+		if(results[0]):
+			return jsonify(face_data)
+
+	return jsonify('unknown face')
 
 @app.route('/', methods=['GET'])
 def main():
