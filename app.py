@@ -44,16 +44,21 @@ def recognize():
 	stdout = io.BytesIO()
 	im.save(stdout, format='JPEG')
 	hex_data = stdout.getvalue()
-	#with open('current_face.jpg', 'wb') as f:
-		#f.write(img_data)
-	unknown_face = face_recognition.load_image_file(io.BytesIO(hex_data))
-	unknown_face_encoding = face_recognition.face_encodings(unknown_face)[0]
-	for known_face_encoding, face_data in zip(known_face_encodings, db_data):
-		results = face_recognition.compare_faces([known_face_encoding], unknown_face_encoding)
-		if(results[0]):
-			return jsonify(face_data)
 
-	return jsonify('unknown face')
+	unknown_face = face_recognition.load_image_file(io.BytesIO(hex_data))
+	unknown_face_encodings = face_recognition.face_encodings(unknown_face)
+
+	recognized_faces = []
+	for known_face_encoding, face_data in zip(known_face_encodings, db_data):
+		for unknown_face_encoding in unknown_face_encodings:
+			result = face_recognition.compare_faces([known_face_encoding], unknown_face_encoding)
+			if(result[0]):
+				recognized_faces.append(face_data)			
+
+	if(recognized_faces):
+		return jsonify(recognized_faces)
+	else:
+		return jsonify('unknown face')
 
 @app.route('/', methods=['GET'])
 def main():
